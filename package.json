@@ -1,0 +1,19 @@
+{
+  "name": "03-titanic",
+  "version": "0.0.1",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js"
+  },
+  "keywords": [],
+  "author": "rox",
+  "license": "ISC",
+  "description": "working with files",
+  "devDependencies": {
+    "jest": "^29.7.0"
+  },
+  "dependencies": {
+    "date-fns": "^4.1.0"
+  }
+}
