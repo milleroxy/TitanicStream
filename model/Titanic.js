@@ -1,69 +1,98 @@
+import readline from "readline";
+import fs from "fs";
+
 export class Titanic {
-    constructor(data, separator) {
-        this.data = data.map(s => s.split(separator))
+    constructor(src, separator) {
+        this.src = src;
+        this.separator = separator;
     }
 
-    get totalFares() {
-        return this.data
-            .map(c => +c[9])
-            .filter(f => !isNaN(f))
-            .reduce((a, b) => a + b);
+    async _processLines(process) {
+        const reader = readline.createInterface({
+            input: fs.createReadStream('./train.csv', 'utf8'),
+            crlfDelay: Infinity
+        });
+        let isFirstLine = true;
+        for await (const line of reader) {
+            if (isFirstLine) {
+                isFirstLine = false;
+                continue;
+            }
+            const cells = line.split(this.separator);
+            process(cells);
+        }
     }
 
-    get avgFaresByClasses() {
-        const res = this.data
-            .filter(c => !isNaN(+c[9]))
-            .map(c => ({pClass: c[2], fare: +c[9]}))
-            .reduce((acc, info) => {
+    async totalFares() {
+        let res = 0;
+        await this._processLines(cells => {
+            res += cells[9] && +cells[9];
+        })
+        console.log(`Total Fares : ${res.toFixed(2)}`);
+    }
+
+    async avgFaresByClasses() {
+        let res = {};
+        await this._processLines(cells => {
+            if (cells[9]) {
+                const info = {pClass: cells[2], fare: +cells[9]}
                 const key = info.pClass;
-                if (!acc[key]) {
-                    acc[key] = [];
+                if (!res[key]) {
+                    res[key] = [];
                 }
-                acc[key].push(info.fare);
-                return acc;
-            }, {})
-        // console.log(res);
+                res[key].push(info.fare);
+            }
+        })
         for (const key in res) {
             res[key] = +(res[key].reduce((a, b) => a + b) / res[key].length).toFixed(2);
         }
-        return res;
+        console.log(`Average fares by classes:`, res);
     }
 
-    get totalSurvived() {
-        return this.data
-            .reduce((acc, c) => {
-                const key = +c[1] ? 'Survived' : 'Non survived';
-                if (!acc[key]) {
-                    acc[key] = 0;
-                }
-                acc[key]++;
-                return acc;
-            }, {})
+    async totalSurvived() {
+        let res = {};
+        await this._processLines(cells => {
+            const key = +cells[1] ? 'Survived' : 'Non survived';
+            if (!res[key]) {
+                res[key] = 0;
+            }
+            res[key]++;
+        });
+        console.log(res);
     }
 
-    get totalSurvivedByGender() {
-        return this.data
-            .reduce((acc, c) => {
-                const key = this._survivedGender(c[4], c[1]);
-                if (!acc[key]) {
-                    acc[key] = 0;
-                }
-                acc[key]++;
-                return acc;
-            }, {})
+    async totalSurvivedByGender() {
+        let res = {};
+        await this._processLines(cells => {
+            const key = this._survivedGender(cells[4], cells[1]);
+            if (!res[key]) {
+                res[key] = 0;
+            }
+            res[key]++;
+        })
+        console.log(res);
     }
 
-    get totalSurvivedChildren() {
-        return this.data
-            .filter(c => c[5] && c[5] < 18)
-            .reduce((acc, c) => {
-                const key = +c[1] ? 'Children survived' : 'Children non survived';
-                if (!acc[key]) {
-                    acc[key] = 0;
+    async totalSurvivedChildren() {
+        let res = {};
+        await this._processLines(cells => {
+            if (cells[5] && cells[5] < 18) {
+                const key = +cells[1] ? 'Children survived' : 'Children non survived';
+                if (!res[key]) {
+                    res[key] = 0;
                 }
-                acc[key]++;
-                return acc;
-            }, {})
+                res[key]++;
+            }
+        })
+        console.log(res);
+    }
+
+    async showStats() {
+        await this.totalFares();
+        await this.avgFaresByClasses();
+        await this.totalSurvived();
+        await this.totalSurvivedByGender();
+        await this.totalSurvivedChildren();
     }
 
     _survivedGender(gender, survived) {
